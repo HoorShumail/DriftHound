@@ -1,0 +1,15 @@
+Machine learning models learn patterns from training data.
+Neural networks use layers of connected artificial neurons.
+A dataset provides examples for training and evaluating a model.
+Researchers split data into training and validation sets.
+Gradient descent adjusts model parameters during training.
+Classification models assign inputs to predefined categories.
+Regression models predict continuous numerical values.
+Feature engineering can improve the quality of input data.
+Deep learning systems often contain many neural network layers.
+A loss function measures how far predictions are from correct answers.
+Regularization helps reduce overfitting on small datasets.
+Natural language models learn relationships between words and sentences.
+Model evaluation uses metrics such as accuracy and recall.
+Data preprocessing prepares raw information for machine learning.
+An AI system should be tested on data it has not seen before.

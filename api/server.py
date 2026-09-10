@@ -1,11 +1,12 @@
 """FastAPI endpoints for the DriftHound pipeline."""
 
+import io
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -163,6 +164,47 @@ def run_pipeline():
         "model_path": model_result["model_path"],
         "metrics_path": model_result["metrics_path"],
         "drift_report_path": report["report_path"],
+    }
+
+
+@app.post("/api/upload-data")
+async def upload_data(
+    baseline_file: UploadFile = File(...),
+    current_file: UploadFile = File(...),
+):
+    """Accept user-uploaded baseline and current CSVs, run drift detection on them."""
+    baseline_bytes = await baseline_file.read()
+    current_bytes = await current_file.read()
+
+    try:
+        baseline = pd.read_csv(io.BytesIO(baseline_bytes))
+        current = pd.read_csv(io.BytesIO(current_bytes))
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=f"Could not parse CSV: {error}")
+
+    missing_baseline = set(FEATURE_COLUMNS) - set(baseline.columns)
+    missing_current = set(FEATURE_COLUMNS) - set(current.columns)
+    if missing_baseline or missing_current:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Missing expected columns. Baseline missing: {missing_baseline}, "
+            f"Current missing: {missing_current}",
+        )
+
+    baseline_path = ingest_data(
+        baseline, RAW_DATA_DIR / "baseline.parquet", expected_columns=FEATURE_COLUMNS
+    )
+    current_path = ingest_data(
+        current, PROCESSED_DATA_DIR / "drifted.parquet", expected_columns=FEATURE_COLUMNS
+    )
+
+    report = DriftMonitor(baseline, FEATURE_COLUMNS).run_full_check(current)
+
+    return {
+        "baseline_path": baseline_path,
+        "current_path": current_path,
+        "drift_report_path": report["report_path"],
+        "drift_report": report,
     }
 
 

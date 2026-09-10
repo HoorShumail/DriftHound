@@ -25,6 +25,18 @@ export const fetchMetricsComparison = async () => {
 };
 export const fetchDiagnosis = () => request("/api/diagnose", { method: "POST" });
 export const runPipeline = () => request("/api/run-pipeline", { method: "POST" });
+export const uploadData = (baselineFile: File, currentFile: File) => {
+  const formData = new FormData();
+  formData.append("baseline_file", baselineFile);
+  formData.append("current_file", currentFile);
+  return fetch(`${API_BASE}/api/upload-data`, {
+    method: "POST",
+    body: formData,
+  }).then((res) => {
+    if (!res.ok) throw new Error("Upload failed");
+    return res.json();
+  });
+};
 export const fetchDistributions = async () => {
   try { return await request("/api/feature-distributions"); } catch { return null; }
 };

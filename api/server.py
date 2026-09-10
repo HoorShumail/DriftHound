@@ -33,7 +33,7 @@ from models.trainer import load_model
 app = FastAPI(title="DriftHound API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "https://drift-hound.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -1,140 +1,112 @@
 # 🐕‍🦺 DriftHound
+### AI-Powered ML Model Monitoring with Statistical Drift Detection & Automated Diagnostics
 
-**ML model monitoring — drift detection, performance signals, and actionable diagnostics.**
+DriftHound is a full-stack monitoring tool that catches ML models silently failing in production. It compares incoming data against a reference baseline using three independent statistical tests, flags exactly which features have drifted, and uses an AI diagnostic agent to explain what happened and what to do about it — in plain English, not raw p-values.
 
-Point it at a baseline and a current dataset. DriftHound tells you what drifted, how bad it is, and what to do about it — in plain English, not just p-values.
+It helps users and developers:
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-teal) ![Next.js](https://img.shields.io/badge/Next.js-Frontend-black) ![License](https://img.shields.io/badge/License-MIT-lightgrey)
+- 🎯 Catch model drift before it becomes a business problem
+- 📊 Run three independent statistical tests per feature, not just one
+- 🧠 Get an AI-generated root cause analysis and action plan
+- 📤 Analyze real data by uploading their own baseline/current CSVs
+- 🚀 Explore a live, deployed example of a monitoring + diagnostic pipeline
 
-**Live app:** [drift-hound.vercel.app](https://drift-hound.vercel.app)
-**API docs:** [drifthound-baf0314d.fastapicloud.dev/docs](https://drifthound-baf0314d.fastapicloud.dev/docs)
+## 🚀 Features
 
----
+✅ Multi-Test Drift Detection (KS Test, PSI, Wasserstein Distance)
 
-## 📸 Demo
+✅ Any-Test-Triggers Status Logic (favors catching real drift over reducing noise)
 
-Two ways to use it:
+✅ AI Diagnostic Agent powered by GPT-4o-mini
 
-- **▶ Run Pipeline** — generates a fresh synthetic baseline and current dataset on the fly, trains a baseline classifier, runs full drift detection, and populates the whole dashboard in one click. No setup needed.
-- **📤 Upload Your Own Data** — drop in your own `baseline.csv` and `current.csv` (matching the expected feature columns) and get the exact same drift analysis run against your real data instead of synthetic samples.
+✅ CSV Upload for Custom Baseline/Current Data
 
-![Dashboard overview](assets/dashboard-overview.png)
+✅ One-Click Synthetic Pipeline for Instant Demo Data
 
----
+✅ Live Distribution Charts (Baseline vs. Current, per feature)
 
-## 🧠 What This Is
+✅ Model Performance Metrics Dashboard (Accuracy, Precision, Recall, F1, ROC AUC)
 
-A model that looks healthy on paper can quietly degrade in production while nobody notices — because the *data* feeding it has shifted, not the model itself. DriftHound is a small, self-contained tool for catching that shift early, with three things most drift-monitoring demos skip:
+✅ Next.js Dashboard with Real-Time Status Banner
 
-1. **Multiple independent statistical tests**, not just one — so a single noisy metric doesn't drive a false alarm (or a missed one).
-2. **A real upload path**, not just synthetic data — you can test it against your own CSVs, not only a canned demo.
-3. **An LLM diagnostic layer on top of the raw stats** — turning "KS statistic: 0.0325, p-value: 5.17e-05" into an actual explanation of what probably happened and what to do next.
-
----
-
-## 📊 How Drift Detection Works
-
-Each feature in the current dataset is compared against the baseline using three independent tests:
-
-| Test | What it measures |
-|---|---|
-| **KS Test** (Kolmogorov–Smirnov) | Whether the two distributions differ in shape |
-| **PSI** (Population Stability Index) | How much a distribution has shifted, in a single interpretable score |
-| **Wasserstein Distance** | The "cost" of transforming one distribution into the other |
-
-**Decision rule:** if *any one* of the three tests flags drift, the feature is marked **Drifted**. Only if all three agree "no drift" is it marked **OK**. This favors catching real drift over reducing false positives — appropriate for a monitoring tool where a missed alert is worse than an extra one.
-
-![Feature Drift Analysis table](assets/drift-table.png)
-
----
-
-## 🤖 AI Diagnostics
-
-Once drift is detected, DriftHound sends the raw statistical report to **GPT-4o-mini** and asks for a structured breakdown:
-
-- **📊 Drift Summary** — what drifted, how severe, and the likely impact
-- **🔍 Root Cause Analysis** — ranked, plausible explanations (data pipeline changes, seasonality, feature engineering bugs, etc.)
-- **⚡ Recommended Actions** — a prioritized checklist, not a wall of text
-- **📈 Risk Assessment** — what this means for the model's predictions if left unaddressed
-
-![AI Diagnostics panel](assets/ai-diagnostics.png)
-
----
-
-## 🏗️ How It Works
+## 🏗️ Project Architecture
 
 ```
-Baseline CSV/Parquet ──┐
-                        ├──► DriftMonitor ──► KS / PSI / Wasserstein per feature
-Current CSV/Parquet ────┘            │
-                                      ▼
-                          Drift report (JSON) ──► GPT-4o-mini ──► Structured diagnosis
-                                      │
-                                      ▼
-                     FastAPI backend ──► Next.js dashboard (charts, table, metrics)
+Baseline Data + Current Data
+          │
+          ▼
+     DriftMonitor
+          │
+    ┌─────┼─────┐
+    ▼     ▼     ▼
+ KS Test  PSI  Wasserstein
+    │     │     │
+    └─────┼─────┘
+          ▼
+   Feature Drift Report (JSON)
+          │
+          ▼
+   AI Diagnostic Agent (GPT-4o-mini)
+          │
+    ┌─────┴─────┐
+    ▼           ▼
+Root Cause   Recommended
+ Analysis      Actions
+    │           │
+    └─────┬─────┘
+          ▼
+  FastAPI Backend ──► Next.js Dashboard
 ```
-
-Two entry points feed the same pipeline:
-- **`/api/run-pipeline`** generates synthetic data internally (`generate_baseline_data` + `inject_drift`), trains a baseline classifier, and runs the full drift check.
-- **`/api/upload-data`** accepts two user-supplied CSVs (validated against the expected feature columns), skips synthetic generation, and runs the identical `DriftMonitor` logic against real data.
-
----
 
 ## 🛠️ Tech Stack
 
-**Backend**
-- [FastAPI](https://fastapi.tiangolo.com/) — API framework
-- [scikit-learn](https://scikit-learn.org/) — baseline classifier, model metrics
-- [SciPy](https://scipy.org/) — statistical test implementations
-- [pandas](https://pandas.pydata.org/) / [PyArrow](https://arrow.apache.org/docs/python/) — data handling, Parquet I/O
-- [OpenAI](https://platform.openai.com/) (GPT-4o-mini) — AI diagnosis
-- [joblib](https://joblib.readthedocs.io/) — model persistence
-
-**Frontend**
-- [Next.js](https://nextjs.org/) + [React](https://react.dev/)
-- [Tailwind CSS](https://tailwindcss.com/) + [Typography plugin](https://tailwindcss.com/docs/typography-plugin)
-- [Recharts](https://recharts.org/) — distribution charts
-- [react-markdown](https://github.com/remarkjs/react-markdown) — renders the AI diagnosis output
-
-**Infrastructure**
-- Backend hosted on [FastAPI Cloud](https://fastapicloud.com)
-- Frontend hosted on [Vercel](https://vercel.com)
-
----
+- Python
+- FastAPI
+- scikit-learn
+- SciPy
+- pandas / PyArrow
+- OpenAI (GPT-4o-mini)
+- Next.js
+- React
+- Tailwind CSS
+- Recharts
+- react-markdown
 
 ## 📂 Project Structure
 
 ```
-drifthound/
+DriftHound/
 │
 ├── api/
-│   └── server.py            # FastAPI app — all routes, CORS config
+│   └── server.py              # FastAPI app — all routes, CORS config
 │
-├── agent/                   # OpenAI client + diagnostic logic
-│   ├── client.py
-│   └── diagnostician.py
+├── agent/
+│   ├── client.py               # OpenAI client setup
+│   └── diagnostician.py        # Drift → diagnosis logic
 │
-├── core/                    # Drift detector math (KS, PSI, Wasserstein)
-│   └── drift_detectors.py
+├── core/
+│   └── drift_detectors.py      # KS, PSI, Wasserstein implementations
 │
-├── drift/                   # Monitoring orchestration + alerting
-│   ├── monitor.py
-│   └── alerts.py
+├── drift/
+│   ├── monitor.py               # Orchestrates the full drift check
+│   └── alerts.py                # Alert formatting and thresholds
 │
-├── data/                    # Synthetic data generation + ingestion pipeline
-│   └── generators/synthetic_data.py
+├── data/
+│   └── generators/
+│       └── synthetic_data.py    # Synthetic baseline + drift injection
 │
-├── models/                  # Baseline training, evaluation, persistence
-│   ├── baseline.py
+├── models/
+│   ├── baseline.py              # Baseline training pipeline
 │   ├── trainer.py
-│   └── evaluator.py
+│   └── evaluator.py             # Metrics computation + comparison
 │
 ├── config/
-│   └── settings.py          # Paths, feature columns, thresholds
+│   └── settings.py              # Paths, feature columns, constants
 │
-├── frontend/                # Next.js dashboard
+├── frontend/
 │   └── src/
-│       ├── app/page.tsx
+│       ├── app/
+│       │   └── page.tsx         # Main dashboard page
 │       └── components/
 │           ├── upload-panel.tsx
 │           ├── drift-table.tsx
@@ -144,82 +116,86 @@ drifthound/
 │           ├── status-banner.tsx
 │           └── run-pipeline-button.tsx
 │
-├── tests/                   # pytest suite
-├── run_pipeline.py          # Standalone CLI entry point (Phases 1–4)
-├── main.py                  # FastAPI Cloud entrypoint (imports api.server:app)
+├── tests/
+├── run_pipeline.py               # Standalone CLI entry point
+├── main.py                       # FastAPI Cloud entrypoint
 └── requirements.txt
 ```
 
----
+## 🎯 How It Works
 
-## 🔌 API Reference
+**1️⃣ Get Baseline and Current Data**
 
-| Method | Route | Description | Needs `OPENAI_API_KEY` |
-|---|---|---|---|
-| `GET` | `/` | Health check | No |
-| `GET` | `/api/status` | Which pipeline phases have completed | No |
-| `GET` | `/api/drift-report` | Most recent drift report | No |
-| `GET` | `/api/metrics` | Baseline model metrics | No |
-| `GET` | `/api/metrics/comparison` | Baseline vs. current metrics | No |
-| `POST` | `/api/run-pipeline` | Generate synthetic data + run full pipeline | No |
-| `POST` | `/api/upload-data` | Upload baseline/current CSVs, run drift check | No |
-| `GET` | `/api/feature-distributions` | Sampled values per feature for charting | No |
-| `POST` | `/api/diagnose` | AI diagnosis of the current drift report | **Yes** |
+Either click **Run Pipeline** to generate synthetic baseline and current datasets instantly, or upload your own `baseline.csv` and `current.csv` through the dashboard.
 
-Full interactive docs: `/docs` on the backend URL.
+**2️⃣ System Processing**
 
----
+The system:
+- Runs KS Test, PSI, and Wasserstein Distance on every feature
+- Compares each result against the reference baseline
+- Flags a feature as **Drifted** if any single test detects a shift
+- Computes baseline model performance metrics (Accuracy, Precision, Recall, F1, ROC AUC)
 
-## 🚀 Getting Started
+**3️⃣ AI Diagnosis**
 
-```bash
-git clone https://github.com/HoorShumail/DriftHound.git
-cd DriftHound
+The Diagnostic Agent:
+- Reads the full drift report
+- Generates a **Drift Summary** (what drifted, severity, impact)
+- Produces a ranked **Root Cause Analysis**
+- Returns a prioritized **Recommended Actions** checklist
+- Adds a **Risk Assessment** for what happens if left unaddressed
+
+**4️⃣ System Displays**
+
+- 📊 Model Performance metrics cards
+- 📋 Feature Drift Analysis table (per-test breakdown + status)
+- 📈 Distribution Overview charts (baseline vs. current, per feature)
+- 🤖 AI Diagnostics panel (full structured explanation)
+
+## 📊 Example Usage
+
+**Input**
+
+```
+Upload baseline.csv and current.csv, then click Analyze My Data.
 ```
 
-**Backend:**
-```bash
-python -m venv .venv
-source .venv/bin/activate      # or .venv\Scripts\Activate.ps1 on Windows
-pip install -r requirements.txt
-uvicorn api.server:app --reload --port 8000
+**Output**
+
+```
+📋 2 of 6 features flagged as Drifted (feature_1, feature_3)
+📈 Distribution charts update to show baseline vs. current for each feature
+🧠 AI Diagnosis generated: drift summary, root cause analysis,
+   recommended actions, and risk assessment
+✅ Dashboard refreshes with real data instead of synthetic samples
 ```
 
-**Frontend** (in a second terminal):
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## 💡 Future Improvements
 
-Open `http://localhost:3000`.
+- Configurable Feature Schemas (beyond the current fixed columns)
+- Seeded/Reproducible Synthetic Runs
+- Authentication for Multi-User Deployments
+- Docker Support for Local + Production Parity
+- Historical Drift Tracking Over Time
+- Slack/Email Alerting Integration
+- Support for Additional Drift Detection Methods
+- Multi-Model Comparison Dashboard
 
-**For AI diagnosis**, create a `.env` file in the project root:
-```env
-OPENAI_API_KEY=your_key_here
-```
+## 🔗 Links
 
-**To test the upload feature**, prepare two CSVs with matching columns (`feature_1` through `feature_6`) and use the **Upload Your Own Data** panel on the dashboard.
-
----
-
-## ⚠️ Honest Limitations
-
-- **Synthetic runs aren't seeded.** `/api/run-pipeline` generates fresh random data on every call, so which features show as "drifted" can vary run to run — occasionally more features trigger than the two intentionally drifted, due to PSI/Wasserstein threshold sensitivity on random noise. This is expected variance, not a detection bug, but it does mean back-to-back demo runs won't always look identical.
-- **Feature columns are currently hardcoded.** Uploaded CSVs must match `FEATURE_COLUMNS` exactly (`feature_1`–`feature_6`) — arbitrary schemas aren't yet supported. A mismatch returns a clear 400 error rather than a silent failure.
-- **Free-tier hosting trade-offs.** The backend (FastAPI Cloud free tier) can take 30–50 seconds to respond after a period of inactivity while it wakes up — expected cold-start behavior, not downtime.
-- **No authentication.** This is a demo/portfolio deployment — anyone with the URL can run the pipeline or upload data. Not intended for production use as-is.
-
----
+- **Live demo:** https://drift-hound.vercel.app
+- **API docs:** https://drifthound-baf0314d.fastapicloud.dev/docs
+- **GitHub:** https://github.com/HoorShumail/DriftHound
 
 ## 🧑‍💻 Author
 
 **Hoor Shumail**
-AI | Agentic AI | Machine Learning | Computer Vision
 
-- GitHub: [github.com/HoorShumail](https://github.com/HoorShumail)
-- LinkedIn: [linkedin.com/in/hoor-shumail-a3a076326](https://www.linkedin.com/in/hoor-shumail-a3a076326/)
+AI | Machine Learning | Agentic AI | Model Monitoring | Multi-Agent Systems
+
+- GitHub: https://github.com/HoorShumail
+- LinkedIn: https://www.linkedin.com/in/hoor-shumail-a3a076326/
 
 ## 📜 License
 
-MIT — built for educational and portfolio purposes.
+This project is developed for educational and portfolio purposes.
